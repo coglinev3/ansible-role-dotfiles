@@ -1,0 +1,98 @@
+---
+name: Build
+
+# Controls when the workflow will run
+'on':
+  push:
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: 'coglinev3.dotfiles'
+
+jobs:
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v4
+        with:
+          path: 'coglinev3.dotfiles'
+
+      - name: Run ansible-lint
+        uses: ansible-actions/ansible-lint-action@v1.0.2
+        with:
+          target: "./"
+          required_collections: 'community.general'
+
+  test:
+    name: Molecule
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - distro_version: 'alpine-3.19'
+          - distro_version: 'alpine-3.20'
+          - distro_version: 'almalinux-9'
+          - distro_version: 'debian-12'
+          - distro_version: 'fedora-41'
+          - distro_version: 'ubuntu-22.04'
+          - distro_version: 'ubuntu-24.04'
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v4
+        with:
+          path: 'coglinev3.dotfiles'
+
+      - name: Install Molecule
+        run: >-
+          python3 -m pip install --user
+          ansible
+          molecule
+          molecule-plugins[docker]
+
+      - name: Configure Ansible
+        run: |
+          mkdir -p ~/.ansible/roles
+          cp .github/ansible.cfg ~/.ansible.cfg
+          cp .github/hosts ~/.ansible/hosts
+          ansible --version
+
+      - name: Install required Ansible Role(s)
+        run: ansible-galaxy install -r .github/requirements.yml -p ~/.ansible/roles
+
+      - name: Show Molecule version
+        run: molecule --version
+
+      - name: Set environment variables
+        run: |
+          distro_version=${{ matrix.distro_version }}
+          split=(${distro_version//-/ })
+          echo "MOLECULE_DISTRO=${split[0]}" >> $GITHUB_ENV
+          echo "MOLECULE_DISTRO_VERSION=${split[1]}" >> $GITHUB_ENV
+
+      - name: Run tests.
+        run: molecule test --all
+        env:
+          PY_COLORS: '1'
+          ANSIBLE_FORCE_COLOR: '1'
+
+  # Push Ansible role to Ansible Galaxy
+  release:
+    name: Release
+    needs:
+      - lint
+      - test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: galaxy
+        uses: robertdebock/galaxy-action@1.2.0
+        with:
+          galaxy_api_key: ${{ secrets.galaxy_api_key }}

@@ -1,0 +1,18 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: "Detect OS."
+      ansible.builtin.debug:
+        msg: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: "Get content of home directory"
+      ansible.builtin.command: ls -la ~
+      register: home_dir
+
+    - name: "Print home_dir."
+      ansible.builtin.debug:
+        msg: "{{ home_dir.stdout_lines }}"

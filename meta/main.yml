@@ -3,6 +3,7 @@ dependencies: []
 
 galaxy_info:
   role_name: dotfiles
+  namespace: coglinev3
   author: geerlingguy
   description: Dotfile installation for UNIX/Linux.
   company: "Midwestern Mac, LLC"
