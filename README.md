@@ -47,6 +47,10 @@ None
       roles:
         - { role: geerlingguy.dotfiles }
 
+## Version
+
+Release: 1.1.1
+
 ## License
 
 MIT / BSD
